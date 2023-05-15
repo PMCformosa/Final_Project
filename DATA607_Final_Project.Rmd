@@ -1,0 +1,167 @@
+---
+title: "DATA607_Final_Project"
+author: "Pei-Ming_Chen"
+date: "`r Sys.Date()`"
+output: 
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+Background 
+As of 2021, approximately 56% of the world‘s population lives in urban areas, according to the United Nations. This number is projected to increase to 68% by 2050. The degree of urbanization varies widely by region and country, with some countries being predominantly rural while others are overwhelmingly urban. Thus, human behaviors in urban area could cause more than 60 percent of impact to the earth. I have been interested to know how to plan highly concentrated of human dwelling in a better way that bring the best life quality to residents and the least impact to our environment.
+Data of this project was downloaded from a published paper "Metropolitan air pollution abatement & industrial growth: Global urban panel analysis of PM2.5, PM10, SO2 and NO2". Data for 96 metropolises from 56 countries are observed, including annual city-level measures of four major airborne pollutant outcomes, PM2.5, PM10, NO2 and SO2 from 2005 to 2017, expressed as the annual average exposure in micrograms per cubic meter (µg/m3). The study is focused on determine the relationship between GVA and major air pollution of a certain city. A basic investigation about economic development and environmental damaging is conducted. 
+```{r load-packages, message=FALSE}
+library(tidyverse)
+library(openintro)
+library(dplyr)
+library(ggplot2)
+```
+
+### Data Aquisition
+The selected data was transferred from my github page. The original dataset was downloaded from https://deepblue.lib.umich.edu/data/concern/data_sets/d217qp73w?locale=en#read_me_display. The author of this paper was famous for his sustainable urban studies. The raw data was re-organized a little bit and removed some of unwanted data including NA data. 
+```{r }
+City  <- read.csv("https://raw.githubusercontent.com/PMCformosa/Final_Project/9bfd657e43d05e4d3b93033fc8e4a31d5d0fba6d/global.metro.data.leffel2021.csv")
+City 
+
+head(City)
+str(City)
+
+na.omit(City)
+```
+
+### Reveal the dataset with no NA 
+
+```{r }
+City_1 <- na.omit(City)
+City_1
+```
+### Choose certain columns to study for all the countries in this paragraph 
+As to the most curious PM2.5 pollution level , from the chart below, China obviously has the most serious issue on that for its cities. 
+```{r }
+City_1A <- select(City_1, c('Country','City','Incomepc','IncomepcSQ','GDP', 'PM2.5'))
+City_1A
+
+City_1A1 <- City_1A %>%
+  group_by (Country, City) %>%
+  summarise(
+    Average_Incp = mean(Incomepc),
+    Average_IncoSQ = mean(IncomepcSQ),
+    Average_GDP= mean(GDP),
+    Average_PM2.5 = mean(PM2.5))
+City_1A1
+
+
+ggplot(data=City_1A1, aes(x=Average_PM2.5, y=Country, fill = Country)) + geom_bar(stat="identity")
+
+```
+
+### Among all the studied cities, Highest income , GDP and income per capita was found in the same country , USA. 
+```{r }
+ggplot(data=City_1A1, aes(x=Average_Incp , y= Country, fill= Country)) + geom_bar(stat="identity")
+
+ggplot(data=City_1A1, aes(x= Average_GDP, y= Country, fill= Country)) + geom_bar(stat="identity")
+
+ggplot(data=City_1A1, aes(x= Average_IncoSQ, y= Country, fill= Country)) + geom_bar(stat="identity")
+
+```
+
+Statistic values of each column :  maximum , median, min, mean were calculated and listed below. The max , mean and min GVA of each country were also listed in a chart below. The relationship between NO2 emission and PM 2.5 of all the countries studied were plotted in a figure below. 
+```{r }
+City_2 <- City_1 %>% select(Country,City,Population,Density, GVA,GVAFirepc, GDP,NO2,PM10,PM10pc,PM2.5,SO2)
+City_2
+summary(City_2)
+
+City_2 %>% 
+  group_by(Country, City) %>% 
+  dplyr::summarise( max = max(GVA), min = min(GVA), mean=mean(GVA), median=median(GVA))
+  
+ City_2 %>% 
+  ggplot(aes(x=PM2.5, y=NO2, fill = Country)) +
+  geom_point(aes(colour = factor(Country))) + 
+  labs(x="PM2.5", y= "NO2", 
+       title="NO2 emission vs PM2.5")
+```
+
+Further, the GDP of cities and their PM2.5 pollution were plotted below. It seems higher the GDP , much lower PM2.5 we can observe.  
+
+```{r }
+
+City_T <- City_2 %>%
+  group_by (Country, City) %>%
+  summarise(
+    Average_GVA = mean(GVA),
+    Average_GDP = mean(GDP),
+    Average_Population = mean(Population),
+    Average_NO2 = mean(NO2),
+    Average_PM2.5 = mean(PM2.5),
+    Average_PM10 = mean(PM10))
+
+City_T
+
+City_T %>% 
+  ggplot(aes(x= Average_GDP , y= Average_PM2.5, fill = Country)) +
+  geom_point(aes(colour = factor(Country))) + 
+  labs(x="Average_GDP", y= "Average_PM2.5", 
+       title="GDP vs PM2.5")
+```
+
+Top 19 cites have the lowest pollution and highest economic developement were listed below. 
+
+```{r }
+City_3 <- filter(City_2 , PM2.5 < 15, PM10 < 40 , NO2 < 50, GVA > 350, GDP > 55)
+City_3
+```
+
+Top 11 cities that have the highest pollution and lowest economic developement were listed below. 
+```{r }
+City_4 <- filter(City_2 , PM2.5 > 15, PM10 > 40 , NO2 > 50, GVA < 400, GDP < 70)
+City_4
+```
+
+
+```{r }
+City_High <- City_3 %>%
+  group_by (Country, City) %>%
+  summarise(
+    Average_GVA = mean(GVA),
+    Average_NO2 = mean(NO2),
+    Average_PM2.5 = mean(PM2.5),
+    Average_PM10 = mean(PM10))
+
+City_High
+
+```
+The figure shows the 7 highest life quality cities of our study
+```{r }
+ggplot(data=City_High, aes(x=City, y=Average_PM2.5)) + geom_bar(stat="identity", fill = "brown")
+```
+he figure shows the 4 lowest life quality cities of our study
+```{r }
+City_Low <- City_4 %>%
+  group_by (Country, City) %>%
+  summarise(
+    Average_GVA = mean(GVA),
+    Average_NO2 = mean(NO2),
+    Average_PM2.5 = mean(PM2.5),
+    Average_PM10 = mean(PM10))
+
+City_Low
+
+ggplot(data=City_Low, aes(x=City, y=Average_PM2.5)) + geom_bar(stat="identity", fill = "purple")
+
+```
+
+Trying to find any cities that could be high polluted and still rich . Or any cities that could be low polluted but still not rich. 
+```{r }
+City_5 <- filter(City_2 , PM2.5 > 20.15 , PM10 > 32.9 , NO2 > 44.15, GVA > 350, GDP > 160)
+City_5
+
+City_6 <- filter(City_2 , PM2.5 < 10.6, PM10 < 20.3 , NO2 < 28.55, GVA < 150, GDP < 160)
+City_6
+
+```
+
+Conclusion  : 
+Based on the cities I studied, it obviously has strong relationship between pollution and economic developement. But we can see which country the city belogs to seems play a big role as well. What drives the city growing strongly decide the level of its air pollution. We can further investigate more as to the city form and the type of economy they are shaping. The growing speed and population density of a city could be another factor in deciding how the pollution can get worse or eased. 
+ 
+
